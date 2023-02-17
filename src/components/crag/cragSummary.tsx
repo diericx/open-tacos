@@ -3,7 +3,6 @@ import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
 import { useForm, FormProvider } from 'react-hook-form'
 import { useSession } from 'next-auth/react'
-import * as Portal from '@radix-ui/react-portal'
 import { MapPinIcon, PencilSquareIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
 import { toast } from 'react-toastify'
 
@@ -63,14 +62,6 @@ export default function CragSummary (props: AreaType): JSX.Element {
   const router = useRouter()
 
   const session = useSession()
-
-  /**
-   * Hold the ref to the area add & delete components.
-   * We use Portal to avoid nesting the add/delete form inside the Edit form which causes
-   * unwanted submit.
-   */
-  const [deletePlaceholderRef, setDeletePlaceholderRef] = useState<HTMLElement|null>()
-  const [addAreaPlaceholderRef, setAddAreaPlaceholderRef] = useState<HTMLElement|null>()
 
   /**
    * Change this value will trigger a form control reset to Lexical-backed components.
@@ -220,20 +211,6 @@ export default function CragSummary (props: AreaType): JSX.Element {
   const canAddClimbs = !canAddAreas
 
   /**
-   * Update refs to divs inside the main form
-   */
-  useEffect(() => {
-    const deleteAreaDiv = document.getElementById('deleteButtonPlaceholder')
-    if (deleteAreaDiv != null) {
-      setDeletePlaceholderRef(deleteAreaDiv)
-    }
-    const addAreaDiv = document.getElementById('addAreaPlaceholder')
-    if (addAreaDiv != null) {
-      setAddAreaPlaceholderRef(addAreaDiv)
-    }
-  }, [editMode, canAddAreas])
-
-  /**
    * We're in edit mode so let's update local cache with new data from the DB
    */
   useEffect(() => {
@@ -261,18 +238,6 @@ export default function CragSummary (props: AreaType): JSX.Element {
 
   return (
     <>
-      {deletePlaceholderRef != null &&
-        <Portal.Root container={deletePlaceholderRef}>
-          {editMode &&
-            <DeleteAreaTrigger areaName={areaName} areaUuid={uuid} parentUuid={parentAreaId} disabled={!canChangeAreaType} />}
-        </Portal.Root>}
-
-      {addAreaPlaceholderRef != null &&
-        <Portal.Root container={addAreaPlaceholderRef}>
-          {canAddAreas &&
-            <AreaCRUD uuid={uuid} areaName={areaName} childAreas={childAreasCache} onChange={onAreaCRUDChangeHandler} editMode={editMode} />}
-        </Portal.Root>}
-
       <FormProvider {...form}>
         <form onSubmit={handleSubmit(submitHandler)}>
 
@@ -364,22 +329,28 @@ export default function CragSummary (props: AreaType): JSX.Element {
             {FormAction}
           </div>
 
-          {canAddAreas &&
-            <div className='block mt-16 min-h-[8rem]' id='addAreaPlaceholder' />}
-
-          {canAddClimbs && <ClimbListPreview editable={editMode} />}
-
-          {editMode && canAddClimbs && (
-            <div className='collapse mt-12 fadeinEffect flex flex-col gap-4'>
-              <div className='flex items-center gap-4'>
-                <PencilSquareIcon className='w-8 h-8 rounded-full p-2 bg-secondary shadow-lg' />
-                <span className='font-semibold text-base-300'>CSV Editor</span>
-                <EditorTooltip />
-              </div>
-              <ClimbBulkEditor name='climbList' initialClimbs={cache.climbList} resetSignal={resetSignal} editable />
-            </div>)}
         </form>
       </FormProvider>
+
+      {editMode &&
+        <DeleteAreaTrigger areaName={areaName} areaUuid={uuid} parentUuid={parentAreaId} disabled={!canChangeAreaType} />}
+
+      {canAddAreas &&
+        <div className='block mt-16 min-h-[8rem]' id='addAreaPlaceholder'>
+          <AreaCRUD uuid={uuid} areaName={areaName} childAreas={childAreasCache} onChange={onAreaCRUDChangeHandler} editMode={editMode} />
+        </div>}
+
+      {canAddClimbs && <ClimbListPreview editable={editMode} />}
+
+      {editMode && canAddClimbs && (
+        <div className='collapse mt-12 fadeinEffect flex flex-col gap-4'>
+          <div className='flex items-center gap-4'>
+            <PencilSquareIcon className='w-8 h-8 rounded-full p-2 bg-secondary shadow-lg' />
+            <span className='font-semibold text-base-300'>CSV Editor</span>
+            <EditorTooltip />
+          </div>
+          <ClimbBulkEditor name='climbList' initialClimbs={cache.climbList} resetSignal={resetSignal} editable />
+        </div>)}
     </>
   )
 }
